@@ -1,0 +1,50 @@
+{
+  "name": "hedgehog",
+  "version": "1.0.0",
+  "description": "",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "print-db": "tsx lookup-db.ts",
+    "issuer:firehose:events": "node ./dist/events/issuer.firehose.js",
+    "issuer:index:events": "node ./dist/events/issuer.indexer.js",
+    "issuer": "pnpm run issuer:firehose:events & pnpm run issuer:index:events",
+    "lender:firehose:events": "node ./dist/events/lender.firehose.js",
+    "lender:index:events": "node ./dist/events/lender.indexer.js",
+    "price:provider": "node ./dist/providers/price-provider.js",
+    "timeseries:provider": "node ./dist/providers/timeseries-provider.js",
+    "providers": "pnpm run price:provider & pnpm run timeseries:provider",
+    "lender": "pnpm run lender:firehose:events & pnpm run lender:index:events",
+    "index": "pnpm run issuer & pnpm run lender",
+    "generate": "drizzle-kit generate",
+    "migrate": "drizzle-kit migrate",
+    "clean-db": "rm -rf ./local-store/sqlite/sqlite.db && tsx ./events/clean.ts && rm -rf ./db/migrations && pnpm run generate && pnpm run migrate",
+    "studio": "drizzle-kit studio",
+    "build": "rm -rf ./dist && tsup",
+    "start": "pnpm run index & pnpm run providers",
+    "token-prep": "tsx ./tests/Issuer/setup-token.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@hashgraph/sdk": "^2.60.1",
+    "@libsql/client": "^0.15.1",
+    "@openzeppelin/contracts": "^5.2.0",
+    "@types/better-sqlite3": "^7.6.12",
+    "axios": "^1.8.4",
+    "better-sqlite3": "^11.9.1",
+    "dotenv": "^16.4.7",
+    "drizzle-orm": "^0.41.0",
+    "ethers": "^6.13.5",
+    "node-lmdb": "^0.10.1",
+    "solc": "^0.8.29",
+    "tsup": "^8.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.10",
+    "drizzle-kit": "^0.30.5",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.2"
+  }
+}
