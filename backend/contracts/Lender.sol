@@ -7,8 +7,9 @@ import "./system-contracts/hedera-token-service/IHederaTokenService.sol";
 import "./system-contracts/hedera-token-service/KeyHelper.sol";
 import "./system-contracts/hedera-token-service/IHRC719.sol";
 import "./@openzeppelin/contracts/utils/math/Math.sol";
-import "./@openzeppelin/contracts/utils/Strings.sol"; 
+import "./@openzeppelin/contracts/utils/Strings.sol";
 import "./PriceOracle.sol";
+// Direct implementations without external interfaces
 
 using Strings for uint64;
 
@@ -282,6 +283,9 @@ contract Lender {
     event LoanRecorded(address indexed token, address indexed borrower, uint64 indexed loanAmountKES, uint64 collateralAmountAsset, uint64 liquidationKESPrice, uint64 repayAmount);
     event LoanLiquidated(address indexed token, address indexed borrower);
     event LoanRepaid(address indexed token, address indexed borrower, uint64 indexed repayAmount);
+    event RandomLiquidationRequested(uint256 indexed requestId, uint256 eligibleBorrowersCount);
+    event HealthCheckPerformed(uint256 timestamp, uint256 liquidationsPerformed);
+    event AutomatedLiquidationTriggered(address indexed borrower, address indexed asset, uint256 timestamp);
     event LiquidityProvided(address indexed asset, uint64 indexed amount, address indexed user);
     event LiquidityWithdrawn(address indexed asset, uint64 indexed amount, address indexed user);
 
@@ -291,6 +295,20 @@ contract Lender {
     IHederaTokenService constant hts = IHederaTokenService(address(0x167));
     address constant KES = address(0x5880fb);
     mapping(address => LendingTokenReserve) public lendingReserves;
+
+    // Direct randomness and automation variables
+    uint256 private nonce;
+    mapping(uint256 => address[]) private pendingLiquidations; // requestId -> eligible borrowers
+    uint256 private liquidationRequestCounter;
+
+    // Automated health check variables
+    uint256 public lastHealthCheckTime;
+    uint256 public healthCheckInterval = 1 days;
+    bool public automationEnabled = true;
+
+    // Liquidation tracking
+    mapping(address => mapping(address => bool)) public isLoanLiquidatable; // borrower -> asset -> liquidatable
+    address[] public activeBorrowers;
 
     receive() external payable {
         // do nothing
@@ -305,8 +323,11 @@ contract Lender {
         _;
     }
 
-    constructor(){
+    constructor() {
         admin = msg.sender;
+        lastHealthCheckTime = block.timestamp;
+        nonce = 1;
+        liquidationRequestCounter = 1;
     }
 
     function addLenderPool(address asset, string memory lender_token_name, string memory lender_token_symbol) payable public onlyAdmin() {
@@ -446,5 +467,99 @@ contract Lender {
     //     asset.liquidateLoan(borrower);
     //     // handle actual liquidation of assets by burning and minting appropriately
     // }
+
+    // ============ DIRECT RANDOMNESS FUNCTIONS ============
+
+    function requestRandomLiquidation(address[] memory eligibleBorrowers) public onlyAdmin {
+        require(eligibleBorrowers.length > 0, "No eligible borrowers");
+
+        uint256 requestId = liquidationRequestCounter++;
+        pendingLiquidations[requestId] = eligibleBorrowers;
+
+        // Generate pseudo-random selection immediately
+        uint256 randomIndex = generatePseudoRandom() % eligibleBorrowers.length;
+        address selectedBorrower = eligibleBorrowers[randomIndex];
+
+        // Perform liquidation
+        performLiquidation(selectedBorrower);
+
+        // Clean up
+        delete pendingLiquidations[requestId];
+
+        emit RandomLiquidationRequested(requestId, eligibleBorrowers.length);
+    }
+
+    function generatePseudoRandom() internal returns (uint256) {
+        // Generate pseudo-random number using block properties and nonce
+        uint256 random = uint256(keccak256(abi.encodePacked(
+            block.timestamp,
+            block.difficulty,
+            block.number,
+            msg.sender,
+            nonce++
+        )));
+        return random;
+    }
+
+    function performLiquidation(address borrower) internal {
+        // Find and liquidate the borrower's loan
+        // This would integrate with your existing loan liquidation logic
+        emit AutomatedLiquidationTriggered(borrower, address(0), block.timestamp);
+    }
+
+    // ============ DIRECT AUTOMATION FUNCTIONS ============
+
+    function triggerHealthCheck() external {
+        require(automationEnabled, "Automation disabled");
+        require((block.timestamp - lastHealthCheckTime) > healthCheckInterval, "Too early for health check");
+
+        lastHealthCheckTime = block.timestamp;
+        uint256 liquidationsPerformed = checkAndLiquidateUnhealthyLoans();
+        emit HealthCheckPerformed(block.timestamp, liquidationsPerformed);
+    }
+
+    function checkAndLiquidateUnhealthyLoans() internal returns (uint256) {
+        uint256 liquidationsPerformed = 0;
+
+        // Check all active borrowers for liquidatable loans
+        for (uint256 i = 0; i < activeBorrowers.length; i++) {
+            address borrower = activeBorrowers[i];
+            if (isLoanUnhealthy(borrower)) {
+                performLiquidation(borrower);
+                liquidationsPerformed++;
+            }
+        }
+
+        return liquidationsPerformed;
+    }
+
+    function isLoanUnhealthy(address borrower) internal view returns (bool) {
+        // Implement loan health check logic
+        // Check collateral ratio, price movements, etc.
+        // This would integrate with your existing loan health logic
+        return false; // Placeholder
+    }
+
+    function setHealthCheckInterval(uint256 _interval) external onlyAdmin {
+        healthCheckInterval = _interval;
+    }
+
+    function setAutomationEnabled(bool _enabled) external onlyAdmin {
+        automationEnabled = _enabled;
+    }
+
+    function addActiveBorrower(address borrower) external onlyAdmin {
+        activeBorrowers.push(borrower);
+    }
+
+    function removeActiveBorrower(address borrower) external onlyAdmin {
+        for (uint256 i = 0; i < activeBorrowers.length; i++) {
+            if (activeBorrowers[i] == borrower) {
+                activeBorrowers[i] = activeBorrowers[activeBorrowers.length - 1];
+                activeBorrowers.pop();
+                break;
+            }
+        }
+    }
 
 }
