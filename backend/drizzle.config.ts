@@ -8,9 +8,11 @@ const NETWORK = process.env.NETWORK
 export default defineConfig({
   out: './db/migrations',
   schema: './db/schema/index.ts',
-  dialect: 'turso',
-  dbCredentials: {
-    url: NETWORK == "testnet" ? DB_URL : "./local-store/sqlite/sqlite.db",
+  dialect: NETWORK == "testnet" ? 'turso' : 'sqlite',
+  dbCredentials: NETWORK == "testnet" ? {
+    url: DB_URL,
     authToken: process.env.DB_TOKEN
+  } : {
+    url: "./local-store/sqlite/sqlite.db"
   },
 });
