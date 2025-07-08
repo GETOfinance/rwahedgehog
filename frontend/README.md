@@ -1,5 +1,11 @@
 # Hedgehog
 
+RWA Hedgehog
+
+On-chain trading and lending tokenized Real World Assets protocol
+
+RWA Hedgehog is an on-chain lending protocol built on the Hedera network that uniquely utilizes tokenized Real World Assets such as Shares from stock exchanges as collateral using Chainlink to make a state change on blockchain. By bridging traditional finance with decentralized technology, Hedgehog offers a secure, transparent, and efficient way to leverage real-world assets within the blockchain ecosystem powered by Chainlink.
+
 Hedgehog is a decentralized finance (DeFi) platform that enables users to collateralize their real-world assets and borrow against them. The frontend is built with Next.js and modern web technologies, it provides a secure and efficient way to unlock the value of tokenized equities.
 
 ## Features
